@@ -9,7 +9,6 @@ const hover = 30;
 const curveSegments = 4;
 const bevelThickness = 2;
 const bevelSize = 1.5;
-let text = "Episode V\nTHE EMPIRE STRIKES BACK";
 
 let camera: THREE.PerspectiveCamera;
 let cameraTarget: THREE.Vector3;
@@ -18,15 +17,10 @@ let renderer: THREE.WebGLRenderer;
 let group: THREE.Group;
 let meshes: Array<THREE.Mesh> = [];
 let material: THREE.MeshPhongMaterial;
-let firstLetter = true;
 
 let font: Font;
 
 let targetRotation = 0;
-let targetRotationOnPointerDown = 0;
-
-let pointerX = 0;
-let pointerXOnPointerDown = 0;
 
 let windowHalfX = window.innerWidth / 2;
 
@@ -46,13 +40,12 @@ function init() {
   scene.background = new THREE.Color(0x000000);
 
   // LIGHTS
-  const dirLight = new THREE.DirectionalLight(0xffffff, 1);
+  const dirLight = new THREE.DirectionalLight(0xffffff, 2);
   dirLight.position.set(0, 5, 1).normalize();
   scene.add(dirLight);
 
   material = new THREE.MeshPhongMaterial({
-    color: 0xfecf05,
-    flatShading: true,
+    color: 0xfca73d
   });
 
   group = new THREE.Group();
@@ -61,10 +54,10 @@ function init() {
 
   const loader = new TTFLoader();
   loader.load(
-    "/fonts/NewsGothic/NewsGothicStd-BoldOblique.ttf",
+    "/fonts/NewsGothic/NewsGothicStd-Bold.ttf",
     function (json) {
       font = new Font(json);
-      createText(text, font);
+      createText(font);
     }
   );
 
@@ -89,10 +82,6 @@ function init() {
   document.body.appendChild(renderer.domElement);
 
   // EVENTS
-  document.body.style.touchAction = "none";
-  document.body.addEventListener("pointerdown", onPointerDown);
-  document.addEventListener("keypress", onDocumentKeyPress);
-  document.addEventListener("keydown", onDocumentKeyDown);
   window.addEventListener("resize", onWindowResize);
 }
 
@@ -103,38 +92,36 @@ function onWindowResize() {
   renderer.setSize(window.innerWidth, window.innerHeight);
 }
 
-function onDocumentKeyDown(event: KeyboardEvent) {
-  if (firstLetter) {
-    firstLetter = false;
-    text = "";
-  }
-
-  const keyCode = event.keyCode;
-
-  // backspace
-  if (keyCode === 8) {
-    event.preventDefault();
-    text = text.substring(0, text.length - 1);
-    refreshText();
-    return false;
-  }
-}
-
-function onDocumentKeyPress(event: KeyboardEvent) {
-  const keyCode = event.which;
-
-  // backspace
-  if (keyCode === 8) event.preventDefault();
-  else {
-    const ch = String.fromCharCode(keyCode);
-    text += ch;
-    refreshText();
-  }
-}
-
-function createText(text: string, font?: Font) {
+function createText(font?: Font) {
   if (!font) return;
-  const textGeometry = new TextGeometry(text, {
+
+  const episodeGeometry = new TextGeometry("Episode III", {
+    font,
+    size: size * 0.7,
+    height,
+    curveSegments,
+    bevelThickness,
+    bevelSize,
+  });
+
+  episodeGeometry.computeBoundingBox();
+  episodeGeometry.computeVertexNormals();
+  const episodeCenterOffset =
+  episodeGeometry.boundingBox !== null
+    ? -0.5 *
+      (episodeGeometry.boundingBox.max.x - episodeGeometry.boundingBox.min.x)
+    : 0;
+
+  meshes[0] = new THREE.Mesh(episodeGeometry, material);
+  meshes[0].position.x = episodeCenterOffset;
+  meshes[0].position.y = hover * 4.7;
+  meshes[0].position.z = 0;
+  meshes[0].rotation.x = -1.3;
+  meshes[0].rotation.y = Math.PI * 2;
+
+  group.add(meshes[0])
+
+  const titleGeometry = new TextGeometry("REVENGE OF THE SITH", {
     font,
     size,
     height,
@@ -142,55 +129,43 @@ function createText(text: string, font?: Font) {
     bevelThickness,
     bevelSize,
   });
+  titleGeometry.computeBoundingBox();
+  titleGeometry.computeVertexNormals();
+  const titleCenterOffset =
+  titleGeometry.boundingBox !== null
+    ? -0.5 *
+      (titleGeometry.boundingBox.max.x - titleGeometry.boundingBox.min.x)
+    : 0;
+  meshes[1] = new THREE.Mesh(titleGeometry, material);
+  meshes[1].position.x = titleCenterOffset;
+  meshes[1].position.y = hover * 3;
+  meshes[1].position.z = 0;
+  meshes[1].rotation.x = -1.3;
+  meshes[1].rotation.y = Math.PI * 2;
+  group.add(meshes[1]);
+
+  const textGeometry = new TextGeometry("War! The Republic is crumbling\nunder attacks by the ruthless\nSith Lord, Count Dooku.\nThere are heroes on both sides.\nEvil is everywhere.\n\nIn a stunning move, the\nfiendish droid leader, General\nGrievous, has swept into the\nRepublic capital and kidnapped\nChancellor Palpatine, leader of\nthe Galactic Senate.\n\nAs the Separatist Droid Army\nattempts to flee the besieged\ncapital with their valuable\nhostage, two Jedi Knights lead a\ndesperate mission to rescue the\ncaptive Chancellor....", {
+    font,
+    size: size * 0.7,
+    height: height,
+    curveSegments,
+    bevelThickness,
+    bevelSize,
+  });
   textGeometry.computeBoundingBox();
   textGeometry.computeVertexNormals();
-  const centerOffset =
-    textGeometry.boundingBox !== null
-      ? -0.5 * (textGeometry.boundingBox.max.x - textGeometry.boundingBox.min.x)
-      : 0;
-  meshes[0] = new THREE.Mesh(textGeometry, material);
-  meshes[0].position.x = centerOffset;
-  meshes[0].position.y = hover;
-  meshes[0].position.z = 0;
-  meshes[0].rotation.x = -1.3;
-  meshes[0].rotation.y = Math.PI * 2;
-  group.add(meshes[0]);
-}
-
-function refreshText() {
-  group.remove(meshes[0]);
-
-  if (!text) {
-    return;
-  }
-
-  createText(text, font);
-}
-
-function onPointerDown(event: PointerEvent) {
-  if (event.isPrimary === false) return;
-
-  pointerXOnPointerDown = event.clientX - windowHalfX;
-  targetRotationOnPointerDown = targetRotation;
-  document.addEventListener("pointermove", onPointerMove);
-  document.addEventListener("pointerup", onPointerUp);
-}
-
-function onPointerMove(event: PointerEvent) {
-  if (event.isPrimary === false) return;
-
-  pointerX = event.clientX - windowHalfX;
-  targetRotation =
-    targetRotationOnPointerDown + (pointerX - pointerXOnPointerDown) * 0.02;
-}
-
-function onPointerUp(event: PointerEvent) {
-  if (event.isPrimary === false) {
-    return;
-  }
-
-  document.removeEventListener("pointermove", onPointerMove);
-  document.removeEventListener("pointerup", onPointerUp);
+  const textCenterOffset =
+  textGeometry.boundingBox !== null
+    ? -0.5 *
+      (textGeometry.boundingBox.max.x - textGeometry.boundingBox.min.x)
+    : 0;
+  meshes[2] = new THREE.Mesh(textGeometry, material);
+  meshes[2].position.x = textCenterOffset;
+  meshes[2].position.y = hover;
+  meshes[2].position.z = 0;
+  meshes[2].rotation.x = -1.3;
+  meshes[2].rotation.y = Math.PI * 2;
+  group.add(meshes[2]);
 }
 
 function animate() {
