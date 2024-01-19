@@ -4,8 +4,8 @@ import { TTFLoader } from "three/addons/loaders/TTFLoader.js";
 import { TextGeometry } from "three/addons/geometries/TextGeometry.js";
 
 const height = 1;
-const size = 40;
-const hover = 30;
+const size = 28;
+const hover = -460;
 const curveSegments = 4;
 const bevelThickness = 2;
 const bevelSize = 1.5;
@@ -18,8 +18,6 @@ let group: THREE.Group;
 let meshes: Array<THREE.Mesh> = [];
 let material: THREE.MeshPhongMaterial;
 
-let font: Font;
-
 let targetRotation = 0;
 
 let windowHalfX = window.innerWidth / 2;
@@ -27,12 +25,12 @@ let windowHalfX = window.innerWidth / 2;
 function init() {
   // CAMERA
   camera = new THREE.PerspectiveCamera(
-    45,
+    60,
     window.innerWidth / window.innerHeight,
     1,
     1500
   );
-  camera.position.set(0, 400, 700);
+  camera.position.set(0, -200, 300);
   cameraTarget = new THREE.Vector3(0, 150, 0);
 
   // SCENE
@@ -40,12 +38,12 @@ function init() {
   scene.background = new THREE.Color(0x000000);
 
   // LIGHTS
-  const dirLight = new THREE.DirectionalLight(0xffffff, 2);
-  dirLight.position.set(0, 5, 1).normalize();
+  const dirLight = new THREE.DirectionalLight(0xffffff, 4);
+  dirLight.position.set(0, 0, 1).normalize();
   scene.add(dirLight);
 
   material = new THREE.MeshPhongMaterial({
-    color: 0xfca73d
+    color: 0xfca73d,
   });
 
   group = new THREE.Group();
@@ -53,25 +51,16 @@ function init() {
   scene.add(group);
 
   const loader = new TTFLoader();
-  loader.load(
-    "/fonts/NewsGothic/NewsGothicStd-Bold.ttf",
-    function (json) {
-      font = new Font(json);
-      createText(font);
-    }
-  );
-
-  const plane = new THREE.Mesh(
-    new THREE.PlaneGeometry(10000, 10000),
-    new THREE.MeshBasicMaterial({
-      color: 0x000000,
-      opacity: 0.5,
-      transparent: true,
-    })
-  );
-  plane.position.y = 100;
-  plane.rotation.x = -Math.PI / 2;
-  scene.add(plane);
+  loader.load("/fonts/NewsGothic/NewsGothicStd-Bold.ttf", function (json) {
+    const textFont = new Font(json);
+    loader.load(
+      "/fonts/UniversLTStd49-LightUltraCondensed.ttf",
+      function (json) {
+        const titleFont = new Font(json);
+        createText(textFont, titleFont);
+      }
+    );
+  });
 
   // RENDERER
   renderer = new THREE.WebGLRenderer({
@@ -92,12 +81,12 @@ function onWindowResize() {
   renderer.setSize(window.innerWidth, window.innerHeight);
 }
 
-function createText(font?: Font) {
+function createText(font?: Font, titleFont?: Font) {
   if (!font) return;
 
   const episodeGeometry = new TextGeometry("Episode III", {
     font,
-    size: size * 0.7,
+    size,
     height,
     curveSegments,
     bevelThickness,
@@ -107,23 +96,19 @@ function createText(font?: Font) {
   episodeGeometry.computeBoundingBox();
   episodeGeometry.computeVertexNormals();
   const episodeCenterOffset =
-  episodeGeometry.boundingBox !== null
-    ? -0.5 *
-      (episodeGeometry.boundingBox.max.x - episodeGeometry.boundingBox.min.x)
-    : 0;
+    episodeGeometry.boundingBox !== null
+      ? -0.5 *
+        (episodeGeometry.boundingBox.max.x - episodeGeometry.boundingBox.min.x)
+      : 0;
 
   meshes[0] = new THREE.Mesh(episodeGeometry, material);
-  meshes[0].position.x = episodeCenterOffset;
-  meshes[0].position.y = hover * 4.7;
-  meshes[0].position.z = 0;
-  meshes[0].rotation.x = -1.3;
-  meshes[0].rotation.y = Math.PI * 2;
+  meshes[0].position.set(episodeCenterOffset, hover + 220, 0);
 
-  group.add(meshes[0])
+  group.add(meshes[0]);
 
   const titleGeometry = new TextGeometry("REVENGE OF THE SITH", {
-    font,
-    size,
+    font: titleFont || font,
+    size: 2.8 * size,
     height,
     curveSegments,
     bevelThickness,
@@ -132,39 +117,33 @@ function createText(font?: Font) {
   titleGeometry.computeBoundingBox();
   titleGeometry.computeVertexNormals();
   const titleCenterOffset =
-  titleGeometry.boundingBox !== null
-    ? -0.5 *
-      (titleGeometry.boundingBox.max.x - titleGeometry.boundingBox.min.x)
-    : 0;
+    titleGeometry.boundingBox !== null
+      ? -0.5 *
+        (titleGeometry.boundingBox.max.x - titleGeometry.boundingBox.min.x)
+      : 0;
   meshes[1] = new THREE.Mesh(titleGeometry, material);
-  meshes[1].position.x = titleCenterOffset;
-  meshes[1].position.y = hover * 3;
-  meshes[1].position.z = 0;
-  meshes[1].rotation.x = -1.3;
-  meshes[1].rotation.y = Math.PI * 2;
+  meshes[1].position.set(titleCenterOffset, hover + 80, 0);
   group.add(meshes[1]);
 
-  const textGeometry = new TextGeometry("War! The Republic is crumbling\nunder attacks by the ruthless\nSith Lord, Count Dooku.\nThere are heroes on both sides.\nEvil is everywhere.\n\nIn a stunning move, the\nfiendish droid leader, General\nGrievous, has swept into the\nRepublic capital and kidnapped\nChancellor Palpatine, leader of\nthe Galactic Senate.\n\nAs the Separatist Droid Army\nattempts to flee the besieged\ncapital with their valuable\nhostage, two Jedi Knights lead a\ndesperate mission to rescue the\ncaptive Chancellor....", {
-    font,
-    size: size * 0.7,
-    height: height,
-    curveSegments,
-    bevelThickness,
-    bevelSize,
-  });
+  const textGeometry = new TextGeometry(
+    "War! The Republic is crumbling\nunder attacks by the ruthless\nSith Lord, Count Dooku.\nThere are heroes on both sides.\nEvil is everywhere.\n\nIn a stunning move, the\nfiendish droid leader, General\nGrievous, has swept into the\nRepublic capital and kidnapped\nChancellor Palpatine, leader of\nthe Galactic Senate.\n\nAs the Separatist Droid Army\nattempts to flee the besieged\ncapital with their valuable\nhostage, two Jedi Knights lead a\ndesperate mission to rescue the\ncaptive Chancellor....",
+    {
+      font,
+      size: size,
+      height: height,
+      curveSegments,
+      bevelThickness,
+      bevelSize,
+    }
+  );
   textGeometry.computeBoundingBox();
   textGeometry.computeVertexNormals();
   const textCenterOffset =
-  textGeometry.boundingBox !== null
-    ? -0.5 *
-      (textGeometry.boundingBox.max.x - textGeometry.boundingBox.min.x)
-    : 0;
+    textGeometry.boundingBox !== null
+      ? -0.5 * (textGeometry.boundingBox.max.x - textGeometry.boundingBox.min.x)
+      : 0;
   meshes[2] = new THREE.Mesh(textGeometry, material);
-  meshes[2].position.x = textCenterOffset;
-  meshes[2].position.y = hover;
-  meshes[2].position.z = 0;
-  meshes[2].rotation.x = -1.3;
-  meshes[2].rotation.y = Math.PI * 2;
+  meshes[2].position.set(textCenterOffset, hover, 0);
   group.add(meshes[2]);
 }
 
@@ -177,3 +156,12 @@ function animate() {
 
 init();
 animate();
+
+const moveText = () => {
+  group.position.y += 0.4;
+  camera.lookAt(cameraTarget);
+  renderer.render(scene, camera);
+  setTimeout(moveText, 10)
+};
+
+moveText();
